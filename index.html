@@ -22,7 +22,6 @@
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script>
-        // Get the canvas element and its context
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -60,17 +59,34 @@
             }
         };
 
-        // Powerup box
-        const powerup = {
-            x: 0,
-            y: -20,
-            size: 20,
-            speed: 2,
-            active: true,
-            respawnTime: 3000,
-            type: null,
-            hue: 0 // For rainbow effect
-        };
+        // Particle system
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 4 + 2;
+                this.speedX = Math.random() * 8 - 4;
+                this.speedY = Math.random() * 8 - 4;
+                this.life = 1.0;
+                this.color = `hsl(${Math.random() * 60 + 200}, 100%, 50%)`;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= 0.02;
+                this.size *= 0.99;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
 
         // Player properties
         const player = {
@@ -92,20 +108,77 @@
             isPoweredUp: false
         };
 
-        // Rest of the basic setup remains the same...
-        [... previous particle system code ...]
+        // Ground
+        const ground = {
+            y: canvas.height - 50,
+            color: '#333'
+        };
+
+        // Powerup
+        const powerup = {
+            x: 0,
+            y: -20,
+            size: 20,
+            speed: 2,
+            active: true,
+            respawnTime: 3000,
+            type: null,
+            hue: 0
+        };
+
+        // Particles array
+        let particles = [];
+
+        // Keys
+        const keys = {
+            a: false,
+            d: false,
+            Space: false
+        };
+
+        // Event listeners
+        window.addEventListener('keydown', function(e) {
+            if (e.code === 'Space') {
+                keys.Space = true;
+                if (player.jumpCount < player.maxJumps) {
+                    player.velocityY = player.jumpForce;
+                    player.jumpCount++;
+                    
+                    if (player.jumpCount === 2) {
+                        createParticleEffect();
+                    }
+                }
+            }
+            if (e.key.toLowerCase() === 'a') keys.a = true;
+            if (e.key.toLowerCase() === 'd') keys.d = true;
+        });
+
+        window.addEventListener('keyup', function(e) {
+            if (e.code === 'Space') keys.Space = false;
+            if (e.key.toLowerCase() === 'a') keys.a = false;
+            if (e.key.toLowerCase() === 'd') keys.d = false;
+        });
+
+        function createParticleEffect() {
+            for (let i = 0; i < 30; i++) {
+                particles.push(new Particle(
+                    player.x + player.size / 2,
+                    player.y + player.size / 2
+                ));
+            }
+        }
 
         function getRandomPowerupType() {
             const rand = Math.random() * 100;
             let cumulative = 0;
             
-            for (const type of Object.values(POWERUP_TYPES)) {
+            for (const [key, type] of Object.entries(POWERUP_TYPES)) {
                 cumulative += type.chance;
                 if (rand <= cumulative) {
                     return type;
                 }
             }
-            return POWERUP_TYPES.SPEED; // fallback
+            return POWERUP_TYPES.SPEED;
         }
 
         function resetPowerup() {
@@ -115,39 +188,40 @@
             powerup.type = getRandomPowerupType();
         }
 
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
         function updatePowerup() {
             if (powerup.active) {
                 powerup.y += powerup.speed;
                 
                 if (powerup.type.playerColor === 'rainbow') {
                     powerup.hue = (powerup.hue + 2) % 360;
-                    powerup.color = `hsl(${powerup.hue}, 100%, 50%)`;
                 }
 
-                // Check for collision with player
+                // Collision with player
                 if (player.x < powerup.x + powerup.size &&
                     player.x + player.size > powerup.x &&
                     player.y < powerup.y + powerup.size &&
                     player.y + player.size > powerup.y) {
                     
-                    // Collect powerup
                     powerup.active = false;
-                    
-                    // Reset previous powerup effects
                     player.currentSpeed = player.baseSpeed;
                     player.jumpForce = player.defaultJumpForce;
-                    
-                    // Apply new powerup effects
                     powerup.type.effect(player);
                     player.color = powerup.type.playerColor;
                     player.isPoweredUp = true;
                     
-                    // Clear existing timer if there is one
                     if (player.colorTimer) {
                         clearTimeout(player.colorTimer);
                     }
                     
-                    // Set timer to revert effects after 5 seconds
                     player.colorTimer = setTimeout(() => {
                         player.color = player.defaultColor;
                         player.currentSpeed = player.baseSpeed;
@@ -157,7 +231,6 @@
                     }, 5000);
                 }
 
-                // Reset if powerup falls below ground
                 if (powerup.y > canvas.height) {
                     setTimeout(() => {
                         resetPowerup();
@@ -176,32 +249,20 @@
                 player.velocityX *= GROUND_FRICTION;
             }
 
-            if (keys.Space && !player.isJumping && player.jumpCount < player.maxJumps) {
-                player.velocityY = player.jumpForce;
-                player.jumpCount++;
-                
-                if (player.jumpCount === 2) {
-                    createParticleEffect();
-                }
-            }
-
             player.velocityY += GRAVITY;
             player.x += player.velocityX;
             player.y += player.velocityY;
 
-            // Update rainbow effect if active
             if (player.color === 'rainbow') {
                 player.hue = (player.hue + 2) % 360;
             }
 
-            // Ground collision
             if (player.y + player.size > ground.y) {
                 player.y = ground.y - player.size;
                 player.velocityY = 0;
                 player.jumpCount = 0;
             }
 
-            // Wall collisions
             if (player.x < 0) {
                 player.x = 0;
                 player.velocityX = 0;
@@ -215,29 +276,28 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw ground
+            // Ground
             ctx.fillStyle = ground.color;
             ctx.fillRect(0, ground.y, canvas.width, canvas.height - ground.y);
             
-            // Draw powerup
+            // Powerup
             if (powerup.active) {
-                ctx.fillStyle = powerup.type.color;
+                ctx.fillStyle = powerup.type.playerColor === 'rainbow' 
+                    ? `hsl(${powerup.hue}, 100%, 50%)`
+                    : powerup.type.color;
                 ctx.fillRect(powerup.x, powerup.y, powerup.size, powerup.size);
             }
             
-            // Draw particles
+            // Particles
             drawParticles();
             
-            // Draw player with rainbow effect if active
-            if (player.color === 'rainbow') {
-                ctx.fillStyle = `hsl(${player.hue}, 100%, 50%)`;
-            } else {
-                ctx.fillStyle = player.color;
-            }
+            // Player
+            ctx.fillStyle = player.color === 'rainbow' 
+                ? `hsl(${player.hue}, 100%, 50%)`
+                : player.color;
             ctx.fillRect(player.x, player.y, player.size, player.size);
         }
 
-        // Game loop remains the same
         function gameLoop() {
             updatePlayer();
             updateParticles();
@@ -246,7 +306,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Start the game
+        // Start game
         resetPowerup();
         gameLoop();
     </script>
