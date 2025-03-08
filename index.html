@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Square Platform Jumper</title>
+    <title>Square Platform Jumper WOW</title>
     <style>
         canvas {
             border: 2px solid black;
@@ -39,7 +39,8 @@
             color: '#ffff00',
             speed: 2,
             active: true,
-            respawnTime: 3000 // 3 seconds
+            respawnTime: 3000, // 3 seconds
+            speedBoost: 2.5 // Speed multiplier when powered up
         };
 
         // Particle system
@@ -76,7 +77,8 @@
             x: canvas.width / 2,
             y: canvas.height / 2,
             size: 30,
-            speed: 5,
+            baseSpeed: 5, // Base speed when not powered up
+            currentSpeed: 5, // Current speed (changes with powerup)
             color: '#00f',
             defaultColor: '#00f',
             velocityX: 0,
@@ -84,7 +86,8 @@
             isJumping: false,
             jumpCount: 0,
             maxJumps: 2,
-            colorTimer: null
+            colorTimer: null,
+            isPoweredUp: false
         };
 
         // Platform (ground)
@@ -170,15 +173,19 @@
                     // Collect powerup
                     powerup.active = false;
                     player.color = '#ff0000'; // Change to red
+                    player.currentSpeed = player.baseSpeed * powerup.speedBoost; // Increase speed
+                    player.isPoweredUp = true;
                     
                     // Clear existing timer if there is one
                     if (player.colorTimer) {
                         clearTimeout(player.colorTimer);
                     }
                     
-                    // Set timer to revert color after 5 seconds
+                    // Set timer to revert color and speed after 5 seconds
                     player.colorTimer = setTimeout(() => {
                         player.color = player.defaultColor;
+                        player.currentSpeed = player.baseSpeed; // Reset speed
+                        player.isPoweredUp = false;
                         setTimeout(resetPowerup, powerup.respawnTime);
                     }, 5000);
                 }
@@ -195,9 +202,9 @@
 
         function updatePlayer() {
             if (keys.a) {
-                player.velocityX = -player.speed;
+                player.velocityX = -player.currentSpeed;
             } else if (keys.d) {
-                player.velocityX = player.speed;
+                player.velocityX = player.currentSpeed;
             } else {
                 player.velocityX *= GROUND_FRICTION;
             }
