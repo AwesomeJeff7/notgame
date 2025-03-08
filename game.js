@@ -61,7 +61,7 @@ let particles = [];
 
 // Keep track of which keys are currently pressed
 const keys = {
-    ArrowLeft: false,
+    A: false,
     ArrowRight: false,
     Space: false
 };
@@ -80,13 +80,13 @@ window.addEventListener('keydown', function(e) {
             }
         }
     }
-    if (e.key === 'ArrowLeft') keys.ArrowLeft = true;
+    if (e.key === 'A') keys.A = true;
     if (e.key === 'ArrowRight') keys.ArrowRight = true;
 });
 
 window.addEventListener('keyup', function(e) {
     if (e.code === 'Space') keys.Space = false;
-    if (e.key === 'ArrowLeft') keys.ArrowLeft = false;
+    if (e.key === 'A') keys.A = false;
     if (e.key === 'ArrowRight') keys.ArrowRight = false;
 });
 
