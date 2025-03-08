@@ -42,7 +42,7 @@ const player = {
     y: canvas.height / 2,
     size: 30,
     speed: 5,
-    color: '#00f',
+    color: '#02C6AF',
     velocityX: 0,
     velocityY: 0,
     isJumping: false,
