@@ -115,7 +115,7 @@ function drawParticles() {
 
 function updatePlayer() {
     // Horizontal movement
-    if (keys.ArrowLeft) {
+    if (keys.A) {
         player.velocityX = -player.speed;
     } else if (keys.ArrowRight) {
         player.velocityX = player.speed;
