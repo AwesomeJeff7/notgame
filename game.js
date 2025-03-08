@@ -42,7 +42,7 @@ const player = {
     y: canvas.height / 2,
     size: 30,
     speed: 5,
-    color: '#02C6AF',
+    color: '#00f',
     velocityX: 0,
     velocityY: 0,
     isJumping: false,
@@ -61,8 +61,8 @@ let particles = [];
 
 // Keep track of which keys are currently pressed
 const keys = {
-    A: false,
-    ArrowRight: false,
+    a: false,
+    d: false,
     Space: false
 };
 
@@ -80,14 +80,16 @@ window.addEventListener('keydown', function(e) {
             }
         }
     }
-    if (e.key === 'A') keys.A = true;
-    if (e.key === 'ArrowRight') keys.ArrowRight = true;
+    // Changed to use 'a' and 'd' keys (case-insensitive)
+    if (e.key.toLowerCase() === 'a') keys.a = true;
+    if (e.key.toLowerCase() === 'd') keys.d = true;
 });
 
 window.addEventListener('keyup', function(e) {
     if (e.code === 'Space') keys.Space = false;
-    if (e.key === 'A') keys.A = false;
-    if (e.key === 'ArrowRight') keys.ArrowRight = false;
+    // Changed to use 'a' and 'd' keys (case-insensitive)
+    if (e.key.toLowerCase() === 'a') keys.a = false;
+    if (e.key.toLowerCase() === 'd') keys.d = false;
 });
 
 function createParticleEffect() {
@@ -114,10 +116,10 @@ function drawParticles() {
 }
 
 function updatePlayer() {
-    // Horizontal movement
-    if (keys.A) {
+    // Horizontal movement - changed to use 'a' and 'd' keys
+    if (keys.a) {
         player.velocityX = -player.speed;
-    } else if (keys.ArrowRight) {
+    } else if (keys.d) {
         player.velocityX = player.speed;
     } else {
         player.velocityX *= GROUND_FRICTION;
