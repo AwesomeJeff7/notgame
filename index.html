@@ -45,21 +45,40 @@
 
         // Particle system
         class Particle {
-            constructor(x, y) {
+            constructor(x, y, type = 'normal') {
                 this.x = x;
                 this.y = y;
-                this.size = Math.random() * 4 + 2;
-                this.speedX = Math.random() * 8 - 4;
-                this.speedY = Math.random() * 8 - 4;
-                this.life = 1.0;
-                this.color = `hsl(${Math.random() * 60 + 200}, 100%, 50%)`;
+                this.type = type;
+                
+                if (type === 'flame') {
+                    // Flame particle properties
+                    this.size = Math.random() * 6 + 4;
+                    this.speedX = Math.random() * 2 - 1;
+                    this.speedY = -Math.random() * 2 - 1;
+                    this.life = 0.7;
+                    // Random orange-red colors for flames
+                    const hue = Math.random() * 30 + 0; // 0-30 for red to orange
+                    this.color = `hsl(${hue}, 100%, 50%)`;
+                } else {
+                    // Original jump particle properties
+                    this.size = Math.random() * 4 + 2;
+                    this.speedX = Math.random() * 8 - 4;
+                    this.speedY = Math.random() * 8 - 4;
+                    this.life = 1.0;
+                    this.color = `hsl(${Math.random() * 60 + 200}, 100%, 50%)`;
+                }
             }
 
             update() {
                 this.x += this.speedX;
                 this.y += this.speedY;
-                this.life -= 0.02;
-                this.size *= 0.99;
+                if (this.type === 'flame') {
+                    this.life -= 0.04; // Flames fade faster
+                    this.size *= 0.95; // Flames shrink faster
+                } else {
+                    this.life -= 0.02;
+                    this.size *= 0.99;
+                }
             }
 
             draw(ctx) {
@@ -138,6 +157,19 @@
             }
         }
 
+        function createFlameTrail() {
+            if (player.isPoweredUp && (Math.abs(player.velocityX) > 0.1)) {
+                const xOffset = player.velocityX > 0 ? 0 : player.size;
+                for (let i = 0; i < 3; i++) {
+                    particles.push(new Particle(
+                        player.x + xOffset,
+                        player.y + Math.random() * player.size,
+                        'flame'
+                    ));
+                }
+            }
+        }
+
         function updateParticles() {
             for (let i = particles.length - 1; i >= 0; i--) {
                 particles[i].update();
@@ -157,9 +189,6 @@
             powerup.active = true;
         }
 
-        // Make sure powerup spawns initially
-        resetPowerup();
-
         function updatePowerup() {
             if (powerup.active) {
                 powerup.y += powerup.speed;
@@ -172,8 +201,8 @@
                     
                     // Collect powerup
                     powerup.active = false;
-                    player.color = '#ff0000'; // Change to red
-                    player.currentSpeed = player.baseSpeed * powerup.speedBoost; // Increase speed
+                    player.color = '#ff0000';
+                    player.currentSpeed = player.baseSpeed * powerup.speedBoost;
                     player.isPoweredUp = true;
                     
                     // Clear existing timer if there is one
@@ -184,7 +213,7 @@
                     // Set timer to revert color and speed after 5 seconds
                     player.colorTimer = setTimeout(() => {
                         player.color = player.defaultColor;
-                        player.currentSpeed = player.baseSpeed; // Reset speed
+                        player.currentSpeed = player.baseSpeed;
                         player.isPoweredUp = false;
                         setTimeout(resetPowerup, powerup.respawnTime);
                     }, 5000);
@@ -212,6 +241,9 @@
             player.velocityY += GRAVITY;
             player.x += player.velocityX;
             player.y += player.velocityY;
+
+            // Create flame trail when powered up and moving
+            createFlameTrail();
 
             if (player.y + player.size > ground.y) {
                 player.y = ground.y - player.size;
@@ -260,6 +292,7 @@
         }
 
         // Start the game
+        resetPowerup();
         gameLoop();
     </script>
 </body>
