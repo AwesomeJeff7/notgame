@@ -31,6 +31,24 @@
         const JUMP_FORCE = -12;
         const GROUND_FRICTION = 0.8;
 
+        // Powerup types
+        const POWERUP_TYPES = {
+            SPEED: {
+                color: '#ff0000',
+                effect: (player) => {
+                    player.currentSpeed = player.baseSpeed * 2.5;
+                    player.color = '#ff0000';
+                }
+            },
+            JUMP: {
+                color: '#00ff00',
+                effect: (player) => {
+                    player.jumpForce = player.defaultJumpForce * 2;
+                    player.color = '#00ff00';
+                }
+            }
+        };
+
         // Powerup box
         const powerup = {
             x: Math.random() * (canvas.width - 20),
@@ -40,7 +58,7 @@
             speed: 2,
             active: true,
             respawnTime: 3000, // 3 seconds
-            speedBoost: 2 // Speed multiplier when powered up
+            type: null
         };
 
         // Particle system
@@ -51,16 +69,13 @@
                 this.type = type;
                 
                 if (type === 'flame') {
-                    // Flame particle properties
                     this.size = Math.random() * 6 + 4;
                     this.speedX = Math.random() * 2 - 1;
                     this.speedY = -Math.random() * 2 - 1;
                     this.life = 0.7;
-                    // Random orange-red colors for flames
-                    const hue = Math.random() * 30 + 0; // 0-30 for red to orange
+                    const hue = Math.random() * 30 + 0;
                     this.color = `hsl(${hue}, 100%, 50%)`;
                 } else {
-                    // Original jump particle properties
                     this.size = Math.random() * 4 + 2;
                     this.speedX = Math.random() * 8 - 4;
                     this.speedY = Math.random() * 8 - 4;
@@ -73,8 +88,8 @@
                 this.x += this.speedX;
                 this.y += this.speedY;
                 if (this.type === 'flame') {
-                    this.life -= 0.04; // Flames fade faster
-                    this.size *= 0.95; // Flames shrink faster
+                    this.life -= 0.04;
+                    this.size *= 0.95;
                 } else {
                     this.life -= 0.02;
                     this.size *= 0.99;
@@ -106,7 +121,9 @@
             jumpCount: 0,
             maxJumps: 2,
             colorTimer: null,
-            isPoweredUp: false
+            isPoweredUp: false,
+            jumpForce: JUMP_FORCE,
+            defaultJumpForce: JUMP_FORCE
         };
 
         // Platform (ground)
@@ -130,7 +147,7 @@
             if (e.code === 'Space' && !keys.Space) {
                 keys.Space = true;
                 if (player.jumpCount < player.maxJumps) {
-                    player.velocityY = JUMP_FORCE;
+                    player.velocityY = player.jumpForce;
                     player.jumpCount++;
                     
                     if (player.jumpCount === 2) {
@@ -158,7 +175,7 @@
         }
 
         function createFlameTrail() {
-            if (player.isPoweredUp && (Math.abs(player.velocityX) > 0.1)) {
+            if (player.isPoweredUp && player.color === '#ff0000' && (Math.abs(player.velocityX) > 0.1)) {
                 const xOffset = player.velocityX > 0 ? 0 : player.size;
                 for (let i = 0; i < 3; i++) {
                     particles.push(new Particle(
@@ -183,10 +200,22 @@
             particles.forEach(particle => particle.draw(ctx));
         }
 
+        function getRandomPowerupType() {
+            return Math.random() < 0.5 ? POWERUP_TYPES.SPEED : POWERUP_TYPES.JUMP;
+        }
+
         function resetPowerup() {
             powerup.x = Math.random() * (canvas.width - powerup.size);
             powerup.y = -powerup.size;
             powerup.active = true;
+            powerup.type = getRandomPowerupType();
+        }
+
+        function resetPlayerPowers() {
+            player.color = player.defaultColor;
+            player.currentSpeed = player.baseSpeed;
+            player.jumpForce = player.defaultJumpForce;
+            player.isPoweredUp = false;
         }
 
         function updatePowerup() {
@@ -201,8 +230,8 @@
                     
                     // Collect powerup
                     powerup.active = false;
-                    player.color = '#ff0000';
-                    player.currentSpeed = player.baseSpeed * powerup.speedBoost;
+                    resetPlayerPowers(); // Reset any active powers
+                    powerup.type.effect(player);
                     player.isPoweredUp = true;
                     
                     // Clear existing timer if there is one
@@ -210,11 +239,9 @@
                         clearTimeout(player.colorTimer);
                     }
                     
-                    // Set timer to revert color and speed after 5 seconds
+                    // Set timer to revert effects after 5 seconds
                     player.colorTimer = setTimeout(() => {
-                        player.color = player.defaultColor;
-                        player.currentSpeed = player.baseSpeed;
-                        player.isPoweredUp = false;
+                        resetPlayerPowers();
                         setTimeout(resetPowerup, powerup.respawnTime);
                     }, 5000);
                 }
@@ -242,7 +269,7 @@
             player.x += player.velocityX;
             player.y += player.velocityY;
 
-            // Create flame trail when powered up and moving
+            // Create flame trail only for speed powerup
             createFlameTrail();
 
             if (player.y + player.size > ground.y) {
